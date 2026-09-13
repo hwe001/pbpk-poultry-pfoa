@@ -168,6 +168,60 @@ def mc_required_exposure(p: SpeciesParams, n: int = 20000,
             "egg": tgt["egg"] / c_egg, "_t_half": t_half}
 
 
+# --- Formulation and absorption sensitivity (reviewer request) -------------------
+
+def absorption_sensitivity(p: SpeciesParams, f_values=(1.0, 0.8, 0.6, 0.4)) -> dict:
+    """Required exposure if only a fraction F of intake is absorbed.
+
+    Absorbed flux = F * R, and D_required scales exactly as 1/F; computed
+    numerically for completeness.
+    """
+    out = {}
+    for F in f_values:
+        p_t = replace(p, k_u=np.log(2.0) / (T_HALF_DEFAULT_DAYS * 24.0))
+        c = steady_state(p_t, rate_per_h=F / 24.0)
+        tgt = TARGETS[p.name]
+        d = {t: tgt[t] / c[t] for t in tgt}
+        out[F] = float(np.exp(np.mean(np.log(list(d.values())))))
+    return out
+
+
+def formulation_sensitivity(p: SpeciesParams) -> dict:
+    """Sensitivity of the back-calculated exposure to the egg-elimination
+    formulation, at t_half = 5 d.
+
+    baseline : well-mixed egg compartment with first-order oviposition loss
+               (laid eggs are an elimination route) -- the manuscript model.
+    no_sink  : egg treated as a passive monitoring tissue; oviposition NOT
+               counted as elimination (the implicit legacy treatment).
+    """
+    F = 1.0 / 24.0
+    kt = np.log(2.0) / (T_HALF_DEFAULT_DAYS * 24.0)
+    tgt = TARGETS[p.name]
+
+    def d_req(cp, c_egg_per_cp):
+        c_liv = p.P["liver"] * (cp + F / p.Q["liver"])
+        c_mus = p.P["muscle"] * cp
+        c_egg = c_egg_per_cp * cp
+        d = {"liver": tgt["liver"] / c_liv, "muscle": tgt["muscle"] / c_mus,
+             "egg": tgt["egg"] / c_egg}
+        pf = max(d.values()) / min(d.values())
+        dh = float(np.exp(np.mean(np.log(list(d.values())))))
+        return dh, pf
+
+    ed = p.Q["egg"] + p.k_ovo * p.V["egg"] * p.P["egg"]
+    es = p.Q["egg"] * p.k_ovo * p.V["egg"] * p.P["egg"] / ed
+    cp_b = F / (kt * p.V["plasma"] + es)
+    dh_b, pf_b = d_req(cp_b, p.P["egg"] * p.Q["egg"] / ed)
+    cp_n = F / (kt * p.V["plasma"])
+    dh_n, pf_n = d_req(cp_n, p.P["egg"])
+    return {
+        "baseline": {"d_hat": dh_b, "pattern_factor": pf_b},
+        "no_sink": {"d_hat": dh_n, "pattern_factor": pf_n},
+        "ratio_no_sink_over_baseline": dh_n / dh_b,
+    }
+
+
 # --- Sobol indices via definitional conditional sampling -------------------------
 # SALib is not installed here, and the classical Saltelli (2002) cross-sampling
 # estimators are notoriously easy to mis-pair. We therefore estimate the
@@ -297,10 +351,21 @@ def analyse_species(p: SpeciesParams) -> dict:
     for th, d in sweep.items():
         print(f"  t_half={th:5.1f} d: {np.exp(np.mean(np.log(list(d.values())))):.4f}")
 
+    fsens = formulation_sensitivity(p)
+    print(f"egg-formulation sensitivity: baseline d_hat={fsens['baseline']['d_hat']:.3g}, "
+          f"no-sink d_hat={fsens['no_sink']['d_hat']:.3g} "
+          f"(ratio {fsens['ratio_no_sink_over_baseline']:.1f}x); pattern factors "
+          f"{fsens['baseline']['pattern_factor']:.2f} / {fsens['no_sink']['pattern_factor']:.2f}")
+    asens = absorption_sensitivity(p)
+    print("absorption sensitivity (F -> d_hat): "
+          + ", ".join(f"F={k:g}:{v:.3g}" for k, v in asens.items()))
+
     return {"steady_state_check": ss_err, "unit": unit, "d_req": d_req,
             "pattern_factor": pf, "d_hat": d_hat,
             "mc": {"median": med, "lo": lo, "hi": hi},
-            "sweep": sweep, "sobol": sobol_required_exposure(p)}
+            "sweep": sweep, "sobol": sobol_required_exposure(p),
+            "absorption_sensitivity": absorption_sensitivity(p),
+            "formulation_sensitivity": formulation_sensitivity(p)}
 
 
 def main() -> None:
