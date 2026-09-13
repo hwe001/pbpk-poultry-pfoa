@@ -1,0 +1,7 @@
+species,tissue,required_exposure_ug_per_kgBW_day,t_half_assumed_d
+chicken,liver,0.00778531,5.0
+chicken,muscle,0.00547385,5.0
+chicken,egg,0.00668077,5.0
+duck,liver,0.00588399,5.0
+duck,muscle,0.00786647,5.0
+duck,egg,0.0110761,5.0

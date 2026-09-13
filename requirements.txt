@@ -3,4 +3,4 @@ scipy>=1.13
 pandas>=2.2
 seaborn>=0.13
 matplotlib>=3.9
-SALib>=1.4
+salib>=1.4

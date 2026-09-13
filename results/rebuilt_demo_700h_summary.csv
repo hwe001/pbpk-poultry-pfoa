@@ -1,0 +1,21 @@
+species,parameter,value,note
+chicken,k_u,0.166638,h^-1 refit
+chicken,P_liver,5.18802,refit
+chicken,P_kidney,0.6,initial
+chicken,P_muscle,2.90629,refit
+chicken,P_fat,5,initial
+chicken,P_egg,2.68026,refit
+chicken,P_rest,1.2,initial
+chicken,target_liver,0.251,ug/L UNCONFIRMED units
+chicken,target_muscle,0.141,ug/L UNCONFIRMED units
+chicken,target_egg,0.128,ug/L UNCONFIRMED units
+duck,k_u,0.0986513,h^-1 refit
+duck,P_liver,1.78519,refit
+duck,P_kidney,0.55,initial
+duck,P_muscle,2.16294,refit
+duck,P_fat,4.5,initial
+duck,P_egg,2.2947,refit
+duck,P_rest,1.1,initial
+duck,target_liver,0.173,ug/L UNCONFIRMED units
+duck,target_muscle,0.21,ug/L UNCONFIRMED units
+duck,target_egg,0.22,ug/L UNCONFIRMED units

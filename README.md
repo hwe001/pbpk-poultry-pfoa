@@ -2,79 +2,85 @@
 
 Supplementary code for:
 
-> Ho, Tang, Bai, Zhang. "Physiologically Based Pharmacokinetic Modeling of PFOA
-> in Poultry: Insights into Tissue Distribution."
+> Ho, Tang, Bai, Zhang. "Physiologically based pharmacokinetic modelling of
+> PFOA in laying poultry: reverse-dosimetry estimation of feed exposure from
+> survey tissue concentrations."
 
-An 8-compartment physiologically based pharmacokinetic (PBPK) model
-simulating PFOA (perfluorooctanoic acid) kinetics and tissue distribution in
-chickens and ducks, calibrated against physiological parameters from Wang et
-al. (2021) and validated against environmental exposure data from Chongqing,
-China (Tang et al., 2025).
+An 8-compartment PBPK model of PFOA (perfluorooctanoic acid) in chickens and
+ducks, calibrated against survey tissue concentrations from Chongqing, China
+(Tang et al., 2024).
 
-## Contents
+## Current state of this repository (2026-09)
 
-- **`pbpk_poultry_model.py`** — the core model: 8 compartments (Gut, Plasma,
-  Liver, Kidney, Muscle, Fat, Eggs, Rest of Body), a 7-day multi-dose
-  regimen (0.5 µg/24h), simulated to 700h. Runs a 500-iteration Monte Carlo
-  uncertainty analysis (±30% on urinary clearance and liver partition
-  coefficient) and plots predicted concentration profiles alongside the
-  Chongqing experimental data and regulatory Maximum Residue Limits.
-- **`pbpk_poultry_local_sensitivity.py`** — local sensitivity analysis:
-  perturbs each of 6 parameters (Ka, K_urine, K_met, P_liver, P_muscle,
-  P_egg) by +10% one at a time and reports the resulting sensitivity index
-  (%change in tissue concentration / %change in parameter) for liver,
-  muscle, and egg.
-- **`pbpk_poultry_global_sensitivity_sobol.py`** — global (Sobol) sensitivity
-  analysis over 4 parameters (K_urine, P_liver, P_muscle, P_egg) at ±30%
-  ranges, 1024 Saltelli base samples (6144 model evaluations per species),
-  with first-order (S1) and total-order (ST) indices plus real bootstrap
-  95% confidence intervals (not the naive point-estimate bars an earlier
-  version of this analysis used).
+The original model implementation contained structural defects that made its
+quantitative results unreliable. During manuscript revision the model was
+rebuilt from first principles; the rebuilt code is now the authoritative
+implementation, and the original scripts are retained under `legacy/` for
+provenance only.
 
-All three scripts are self-contained (no external data files) and write
-their output plots/CSVs to the working directory.
+### Why the legacy scripts were retired (`legacy/`)
+
+- Renal clearance was applied twice (a `-K_urine` sink in **both** the plasma
+  and the kidney equations), so every fitted clearance value absorbed the
+  duplication.
+- "Flows" were dimensionless fractions of cardiac output used as flow *rates*;
+  there were no tissue volumes and no cardiac output, so the equations could
+  not conserve mass.
+- The three scripts implemented **different** gut-absorption pathways
+  (gut→plasma in the main model, gut→liver in both sensitivity scripts), so
+  no published result could be reproduced from the repository.
+- The dosing code added an amount (mg) directly into a concentration state.
+- The "experimental" error bars in the figure code were synthetic (±5%
+  normal noise generated around published means), not measured variability.
+
+### The rebuilt model (`rebuilt/`)
+
+Standard flow-limited, well-stirred PBPK formulation: state variables are
+amounts (µg/kg body weight), tissues have volumes and blood flows in L/h,
+absorbed dose enters the liver as portal input, renal clearance is applied
+exactly once, no metabolism term (PFOA is not metabolised), and the egg
+compartment loses mass at the oviposition rate (~1 egg/25 h) with laid-egg
+mass tracked as an excretion route. Body-weight-normalised units throughout;
+every non-literature parameter is flagged `# ASSUMPTION` in the source.
+
+- **`rebuilt/pbpk_poultry_rebuilt.py`** — model core + analytic and numerical
+  machinery.
+- **`rebuilt/test_mass_balance.py`** — asserts mass conservation (dose in =
+  stored + renally excreted + oviposited) to ~1e-15 relative error across
+  regimens and species. The legacy code could not pass such a test.
+- **`rebuilt/run_rebuilt_demo.py`** — legacy 7-day scenario demonstration and
+  preliminary reduced refit. Its output is *diagnostic*: matching the survey
+  means at a 700-h post-dosing snapshot forces an elimination half-life of
+  4–7 h, ~2 orders of magnitude faster than PFOA's known persistence —
+  evidence that the post-dosing scenario itself was incompatible with the
+  data, not merely the parameters.
+- **`rebuilt/reverse_dosimetry.py`** — the analysis the revised manuscript
+  uses: analytic steady state under continuous exposure, back-calculation of
+  the exposure required to explain the survey means (with Monte Carlo
+  uncertainty and variance-based sensitivity indices implemented and
+  self-tested in-file; SALib not required), and translation to feed/water
+  concentrations.
+
+## Status caveats
+
+- The calibration-target unit basis (µg/L vs µg/kg wet weight) is pending
+  confirmation against the source survey; the pattern-based conclusions are
+  invariant to it, the absolute back-calculated exposures are not.
+- Physiological volumes/flows carry `# ASSUMPTION` flags pending verification
+  against Wang et al. (2021); no reliable poultry-specific PFOA half-life was
+  identified, so it is swept (0.5–14 d) rather than assumed silently.
+- Figures in `results/` are preliminary working outputs, not publication
+  figures.
 
 ## Running
 
 ```bash
-pip install -r requirements.txt
-python pbpk_poultry_model.py                       # ~1 min
-python pbpk_poultry_local_sensitivity.py           # ~1 min
-python pbpk_poultry_global_sensitivity_sobol.py    # ~30-40 min (12,288 stiff ODE solves)
+pip install numpy scipy matplotlib
+python rebuilt/test_mass_balance.py      # mass-balance verification (~s)
+python rebuilt/run_rebuilt_demo.py       # legacy-scenario diagnostic (~1 min)
+python rebuilt/reverse_dosimetry.py      # steady-state reverse dosimetry (~10 s)
 ```
-
-## A note on reproducibility
-
-An earlier version of the global sensitivity script (used to produce this
-paper's original figures) had two bugs, caught and fixed during manuscript
-revision:
-
-1. It used a stale, differently-calibrated parameter set (absolute L/h flow
-   values and an outdated liver partition coefficient) rather than the
-   values that actually produced the paper's validated Figure 1 results, and
-   a dose 1000x too large.
-2. It ran far fewer samples than the manuscript's stated methodology (1000
-   or 10,000 total simulations depending on version, rather than the stated
-   6144 per species), using ±15-20% ranges instead of the stated ±20-40%.
-
-The version in this repository is the corrected one, verified to use
-exactly the parameters in `pbpk_poultry_model.py` and the sample size/ranges
-described in the manuscript's Methods.
-
-The local sensitivity script was similarly rewritten: the version used to
-produce the original figures only plotted a hardcoded numeric table with no
-underlying simulation code to verify or reproduce it. The version here
-recomputes those values directly from the model equations via parameter
-perturbation, and reproduces the manuscript's reported sensitivity ranges
-closely.
-
-## Requirements
-
-See `requirements.txt`. Tested with the versions listed there; SALib's
-`saltelli` sampler is deprecated in favor of `salib.sample.sobol` as of
-SALib 1.5 but both scripts still work with the deprecated call.
 
 ## Contact
 
-Dr Harvey Ho, Auckland Bioengineering Institute, University of Auckland —
-harvey.ho@auckland.ac.nz
+Dr Harvey Ho — harvey@ratalab.nz
