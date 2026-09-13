@@ -130,9 +130,8 @@ def main() -> None:
         ax.set_ylabel("Concentration (µg/L)")
         ax.grid(alpha=0.3)
         ax.legend(fontsize=7, frameon=False)
-    fig.suptitle("Rebuilt flow-limited PBPK model — legacy 7-day scenario "
-                 "(mass-balance verified; units UNCONFIRMED; not publication results)",
-                 fontsize=11)
+    fig.suptitle("Rebuilt flow-limited PBPK model — legacy 7-day scenario diagnostic\n"
+                 "(mass-balance verified; see Results for interpretation)", fontsize=11)
     fig.tight_layout()
     fig_path = OUT / "rebuilt_demo_chicken_duck.png"
     fig.savefig(fig_path, dpi=200)

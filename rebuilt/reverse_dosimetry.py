@@ -326,7 +326,7 @@ def main() -> None:
     ax.set_xticks(np.arange(len(tissues)), tissues)
     ax.set_ylabel("Concentration (ug/L)")
     ax.set_yscale("log")
-    ax.set_title("(a) Steady-state pattern vs survey means\n(at required exposure; units UNCONFIRMED)")
+    ax.set_title("(a) Steady-state pattern vs survey means\n(at the back-calculated exposure)")
     ax.legend(fontsize=8)
     ax.grid(alpha=0.3, axis="y")
 
@@ -355,7 +355,8 @@ def main() -> None:
     ax.legend(fontsize=8)
     ax.grid(alpha=0.3, axis="y")
 
-    fig.suptitle("Reverse dosimetry, rebuilt poultry PFOA PBPK (preliminary - not publication results)",
+    fig.suptitle("Reverse dosimetry with the rebuilt poultry PFOA PBPK model\n"
+                 "(assumed partition coefficients and husbandry; conditional exposure estimate)",
                  fontsize=11)
     fig.tight_layout()
     fig_path = OUT / "reverse_dosimetry_summary.png"
