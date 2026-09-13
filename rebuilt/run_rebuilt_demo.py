@@ -127,7 +127,7 @@ def main() -> None:
 
     for ax in axes.flat:
         ax.set_xlabel("Time (h)")
-        ax.set_ylabel("Concentration (µg/L)")
+        ax.set_ylabel("Concentration (µg/kg wet weight)")
         ax.grid(alpha=0.3)
         ax.legend(fontsize=7, frameon=False)
     fig.suptitle("Rebuilt flow-limited PBPK model — legacy 7-day scenario diagnostic\n"

@@ -324,7 +324,7 @@ def main() -> None:
         ax.bar(x + width / 2, obs, width, label=f"{name} observed", alpha=0.9,
                hatch="//", edgecolor="white")
     ax.set_xticks(np.arange(len(tissues)), tissues)
-    ax.set_ylabel("Concentration (ug/L)")
+    ax.set_ylabel("Concentration (ug/kg wet weight)")
     ax.set_yscale("log")
     ax.set_title("(a) Steady-state pattern vs survey means\n(at the back-calculated exposure)")
     ax.legend(fontsize=8)
